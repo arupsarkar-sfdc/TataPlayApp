@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		E6685BEF2E1C4C1F00E5B911 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = E6685BEE2E1C4C1F00E5B911 /* README.md */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		E6685B132E1C45C300E5B911 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,6 +31,7 @@
 		E6685B042E1C45C200E5B911 /* TataPlayApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TataPlayApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E6685B122E1C45C300E5B911 /* TataPlayAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TataPlayAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		E6685B1C2E1C45C300E5B911 /* TataPlayAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TataPlayAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		E6685BEE2E1C4C1F00E5B911 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -75,6 +80,7 @@
 		E6685AFB2E1C45C200E5B911 = {
 			isa = PBXGroup;
 			children = (
+				E6685BEE2E1C4C1F00E5B911 /* README.md */,
 				E6685B062E1C45C200E5B911 /* TataPlayApp */,
 				E6685B152E1C45C300E5B911 /* TataPlayAppTests */,
 				E6685B1F2E1C45C300E5B911 /* TataPlayAppUITests */,
@@ -195,6 +201,11 @@
 			);
 			mainGroup = E6685AFB2E1C45C200E5B911;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				E6685BEB2E1C48F100E5B911 /* XCRemoteSwiftPackageReference "Alamofire" */,
+				E6685BEC2E1C490900E5B911 /* XCRemoteSwiftPackageReference "Nuke" */,
+				E6685BED2E1C492000E5B911 /* XCRemoteSwiftPackageReference "KeychainAccess" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = E6685B052E1C45C200E5B911 /* Products */;
 			projectDirPath = "";
@@ -212,6 +223,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E6685BEF2E1C4C1F00E5B911 /* README.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -593,6 +605,33 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		E6685BEB2E1C48F100E5B911 /* XCRemoteSwiftPackageReference "Alamofire" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Alamofire/Alamofire.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.10.2;
+			};
+		};
+		E6685BEC2E1C490900E5B911 /* XCRemoteSwiftPackageReference "Nuke" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/kean/Nuke.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.8.0;
+			};
+		};
+		E6685BED2E1C492000E5B911 /* XCRemoteSwiftPackageReference "KeychainAccess" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/kishikawakatsumi/KeychainAccess.git";
+			requirement = {
+				branch = master;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
 	};
 	rootObject = E6685AFC2E1C45C200E5B911 /* Project object */;
 }
