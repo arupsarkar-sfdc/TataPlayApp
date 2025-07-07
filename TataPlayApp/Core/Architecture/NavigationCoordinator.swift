@@ -22,6 +22,9 @@ class NavigationCoordinator: ObservableObject {
     @Published var showAlert = false
     @Published var alertTitle = ""
     @Published var alertMessage = ""
+    // MARK: - Step 8: Enhanced Navigation Properties
+    @Published var showExternalLinkAlert = false
+    @Published var pendingExternalURL: URL?
     
     // MARK: - Simple Navigation Types
     
@@ -58,6 +61,45 @@ class NavigationCoordinator: ObservableObject {
             case .authentication: return "Authentication"
             case .onboarding: return "Onboarding"
             }
+        }
+    }
+    
+    // MARK: - Step 8: External Navigation Types
+
+    enum ExternalNavigationTarget {
+        case watch(channelId: String? = nil)
+        case trackOrder(orderId: String? = nil)
+        case recharge(planType: String? = nil)
+        case help(section: String? = nil)
+        case login
+        
+        var baseURL: String {
+            switch self {
+            case .watch: return "https://watch.tataplay.com"
+            case .trackOrder: return "https://www.tataplayrecharge.com/my-account/raise-req-new"
+            case .recharge: return "https://www.tataplayrecharge.com/Recharge/QuickRecharge"
+            case .help: return "https://www.tataplay.com/dth/help"
+            case .login: return "/my-account/login"
+            }
+        }
+        
+        func fullURL(with parameter: String? = nil) -> URL? {
+            var urlString = baseURL
+            if let parameter = parameter {
+                switch self {
+                case .watch:
+                    urlString += "/channel/\(parameter)"
+                case .trackOrder:
+                    urlString += "?order=\(parameter)"
+                case .recharge:
+                    urlString += "?plan=\(parameter)"
+                case .help:
+                    urlString += "#\(parameter)"
+                default:
+                    break
+                }
+            }
+            return URL(string: urlString)
         }
     }
     
@@ -232,6 +274,27 @@ class NavigationCoordinator: ObservableObject {
     func showChannelPackages() {
         presentChannelPackages()
     }
+    
+    // MARK: - Step 8: External Navigation Methods
+
+    func navigateToExternal(_ target: ExternalNavigationTarget, parameter: String? = nil) {
+        guard let url = target.fullURL(with: parameter) else { return }
+        pendingExternalURL = url
+        showExternalLinkAlert = true
+    }
+
+    func confirmExternalNavigation() {
+        guard let url = pendingExternalURL else { return }
+        UIApplication.shared.open(url)
+        pendingExternalURL = nil
+        showExternalLinkAlert = false
+    }
+
+    func cancelExternalNavigation() {
+        pendingExternalURL = nil
+        showExternalLinkAlert = false
+    }
+    
 }
 
 // MARK: - Enhanced MainTabView with Simple Navigation
@@ -314,8 +377,14 @@ struct EnhancedMainTabView: View {
             }
         }
         .alert(navigationCoordinator.alertTitle, isPresented: $navigationCoordinator.showAlert) {
-            Button("OK") {
-                navigationCoordinator.dismissAlert()
+//            Button("OK") {
+//                navigationCoordinator.dismissAlert()
+//            }
+            Button("Open") {
+                navigationCoordinator.confirmExternalNavigation()
+            }
+            Button("Cancel", role: .cancel) {
+                navigationCoordinator.cancelExternalNavigation()
             }
         } message: {
             Text(navigationCoordinator.alertMessage)
@@ -449,6 +518,18 @@ struct ChannelDetailView: View {
                     RoundedRectangle(cornerRadius: LayoutConstants.cardCornerRadius)
                         .stroke(TataPlayColors.primary, lineWidth: 1)
                 )
+                
+                // MARK: - Step 8: External Navigation Example
+                Button("Open in Tata Play Web") {
+                    navigationCoordinator.navigateToExternal(.watch(), parameter: channelId)
+                }
+                .font(TataPlayTypography.buttonSecondary)
+                .foregroundColor(TataPlayColors.secondary)
+                .padding(SpacingTokens.buttonPadding)
+                .overlay(
+                    RoundedRectangle(cornerRadius: LayoutConstants.cardCornerRadius)
+                        .stroke(TataPlayColors.secondary, lineWidth: 1)
+                )
             }
             .contentPadding()
         }
@@ -535,6 +616,7 @@ struct SubscriptionDetailsView: View {
 }
 
 struct BillingHistoryView: View {
+    @EnvironmentObject var navigationCoordinator: NavigationCoordinator
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: SpacingTokens.lg) {
@@ -543,6 +625,27 @@ struct BillingHistoryView: View {
                 
                 Text("Recent transactions and payment history would be shown here.")
                     .styled(.bodyText)
+                
+                // MARK: - Step 8: External Navigation for Billing
+                Button("Recharge Now") {
+                    navigationCoordinator.navigateToExternal(.recharge(), parameter: nil)
+                }
+                .font(TataPlayTypography.buttonPrimary)
+                .foregroundColor(.white)
+                .padding(SpacingTokens.buttonPadding)
+                .background(TataPlayColors.primary)
+                .cornerRadius(LayoutConstants.cardCornerRadius)
+
+                Button("Track Recent Order") {
+                    navigationCoordinator.navigateToExternal(.trackOrder(), parameter: nil)
+                }
+                .font(TataPlayTypography.buttonSecondary)
+                .foregroundColor(TataPlayColors.primary)
+                .padding(SpacingTokens.buttonPadding)
+                .overlay(
+                    RoundedRectangle(cornerRadius: LayoutConstants.cardCornerRadius)
+                        .stroke(TataPlayColors.primary, lineWidth: 1)
+                )
             }
             .contentPadding()
         }
@@ -552,6 +655,7 @@ struct BillingHistoryView: View {
 }
 
 struct AccountSettingsView: View {
+    @EnvironmentObject var navigationCoordinator: NavigationCoordinator
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: SpacingTokens.lg) {
@@ -560,6 +664,29 @@ struct AccountSettingsView: View {
                 
                 Text("Profile settings, preferences, and account management options.")
                     .styled(.bodyText)
+                
+                // MARK: - Step 8: External Navigation Examples
+                Button("Get Help Online") {
+                    navigationCoordinator.navigateToExternal(.help(), parameter: "account-settings")
+                }
+                .font(TataPlayTypography.buttonSecondary)
+                .foregroundColor(TataPlayColors.primary)
+                .padding(SpacingTokens.buttonPadding)
+                .overlay(
+                    RoundedRectangle(cornerRadius: LayoutConstants.cardCornerRadius)
+                        .stroke(TataPlayColors.primary, lineWidth: 1)
+                )
+
+                Button("Recharge Online") {
+                    navigationCoordinator.navigateToExternal(.recharge(), parameter: nil)
+                }
+                .font(TataPlayTypography.buttonSecondary)
+                .foregroundColor(TataPlayColors.secondary)
+                .padding(SpacingTokens.buttonPadding)
+                .overlay(
+                    RoundedRectangle(cornerRadius: LayoutConstants.cardCornerRadius)
+                        .stroke(TataPlayColors.secondary, lineWidth: 1)
+                )
             }
             .contentPadding()
         }
@@ -569,6 +696,7 @@ struct AccountSettingsView: View {
 }
 
 struct HelpCenterView: View {
+    @EnvironmentObject var navigationCoordinator: NavigationCoordinator
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: SpacingTokens.lg) {
@@ -577,6 +705,27 @@ struct HelpCenterView: View {
                 
                 Text("FAQs, support articles, and contact information.")
                     .styled(.bodyText)
+                
+                // MARK: - Step 8: External Help Navigation
+                Button("Visit Help Website") {
+                    navigationCoordinator.navigateToExternal(.help(), parameter: "mobile-app")
+                }
+                .font(TataPlayTypography.buttonPrimary)
+                .foregroundColor(.white)
+                .padding(SpacingTokens.buttonPadding)
+                .background(TataPlayColors.primary)
+                .cornerRadius(LayoutConstants.cardCornerRadius)
+
+                Button("Track Your Order") {
+                    navigationCoordinator.navigateToExternal(.trackOrder(), parameter: nil)
+                }
+                .font(TataPlayTypography.buttonSecondary)
+                .foregroundColor(TataPlayColors.primary)
+                .padding(SpacingTokens.buttonPadding)
+                .overlay(
+                    RoundedRectangle(cornerRadius: LayoutConstants.cardCornerRadius)
+                        .stroke(TataPlayColors.primary, lineWidth: 1)
+                )
             }
             .contentPadding()
         }
