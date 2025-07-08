@@ -272,7 +272,11 @@ struct SearchView: View {
     }
 
     private var contentGridColumns: [GridItem] {
-        GridHelpers.contentGrid()
+        [
+            GridItem(.flexible(), spacing: SpacingTokens.gridColumnSpacing),
+            GridItem(.flexible(), spacing: SpacingTokens.gridColumnSpacing)
+            
+        ]
     }
 
     // MARK: - Search Helper Functions
@@ -292,12 +296,12 @@ struct SearchView: View {
 
     private var popularContent: [MockSearchContent] {
         [
-            MockSearchContent(id: "1", title: "Star Sports 1 HD", type: .channels, category: "Sports", imageIcon: "sportscourt.fill"),
-            MockSearchContent(id: "2", title: "KBC 2024", type: .programs, category: "Entertainment", imageIcon: "tv.fill"),
-            MockSearchContent(id: "3", title: "Pathaan", type: .movies, category: "Bollywood", imageIcon: "film.fill"),
-            MockSearchContent(id: "4", title: "Scam 1992", type: .series, category: "Drama", imageIcon: "tv.and.hifispeaker.fill"),
-            MockSearchContent(id: "5", title: "IPL Highlights", type: .sports, category: "Cricket", imageIcon: "sportscourt.fill"),
-            MockSearchContent(id: "6", title: "Breaking News", type: .news, category: "Current Affairs", imageIcon: "newspaper.fill")
+            MockSearchContent(id: "1", title: "Star Sports 1 HD", type: .channels, category: "Sports", imageIcon: "sportscourt.fill", imageName: "star_sports"),
+            MockSearchContent(id: "2", title: "KBC 2024", type: .programs, category: "Entertainment", imageIcon: "tv.fill", imageName: "kbc"),
+            MockSearchContent(id: "3", title: "Pathaan", type: .movies, category: "Bollywood", imageIcon: "film.fill", imageName: "pathaan_poster"),
+            MockSearchContent(id: "4", title: "Scam 1992", type: .series, category: "Drama", imageIcon: "tv.and.hifispeaker.fill", imageName: "scam_1992"),
+            MockSearchContent(id: "5", title: "IPL Highlights", type: .sports, category: "Cricket", imageIcon: "sportscourt.fill", imageName: "ipl_highlights"),
+            MockSearchContent(id: "6", title: "Breaking News", type: .news, category: "Current Affairs", imageIcon: "newspaper.fill", imageName: "breaking_news")
         ]
     }
 
@@ -314,10 +318,17 @@ struct SearchView: View {
 
     private var allSearchContent: [MockSearchContent] {
         popularContent + [
-            MockSearchContent(id: "7", title: "Colors HD", type: .channels, category: "Entertainment", imageIcon: "tv.fill"),
-            MockSearchContent(id: "8", title: "Anupamaa", type: .programs, category: "Drama", imageIcon: "heart.fill"),
-            MockSearchContent(id: "9", title: "RRR", type: .movies, category: "Action", imageIcon: "film.fill"),
-            MockSearchContent(id: "10", title: "The Family Man", type: .series, category: "Thriller", imageIcon: "person.fill")
+            MockSearchContent(
+                id: "7",
+                title: "Colors HD",
+                type: .channels,
+                category: "Entertainment",
+                imageIcon: "tv.fill",
+                imageName: "pathan_poster"
+            ),
+            MockSearchContent(id: "8", title: "Anupamaa", type: .programs, category: "Drama", imageIcon: "heart.fill", imageName: "pathan_poster"),
+            MockSearchContent(id: "9", title: "RRR", type: .movies, category: "Action", imageIcon: "film.fill", imageName: "pathan_poster"),
+            MockSearchContent(id: "10", title: "The Family Man", type: .series, category: "Thriller", imageIcon: "person.fill", imageName: "pathan_poster")
         ]
     }
     
@@ -346,6 +357,7 @@ struct SearchView: View {
         let type: ContentType
         let category: String
         let imageIcon: String
+        let imageName: String?
         
         var typeColor: Color {
             type.color
@@ -454,9 +466,34 @@ struct SearchView: View {
                             .fill(content.typeColor.opacity(0.1))
                             .frame(height: 100)
                             .overlay(
-                                Image(systemName: content.imageIcon)
-                                    .font(.title)
-                                    .foregroundColor(content.typeColor)
+                                Group {
+                                    if let imageName = content.imageName {
+                                        ZStack {
+                                            // Image
+                                            Image(imageName)
+                                                .resizable()
+                                                .aspectRatio(contentMode: .fill)
+                                                .frame(height: 120)
+                                                .clipped()
+                                            
+                                            // Subtle gradient overlay for better badge visibility
+                                            LinearGradient(
+                                                gradient: Gradient(colors: [
+                                                    Color.black.opacity(0.0),
+                                                    Color.black.opacity(0.2)
+                                                ]),
+                                                startPoint: .center,
+                                                endPoint: .topTrailing
+                                            )
+                                        }
+                                        .cornerRadius(LayoutConstants.smallCardCornerRadius)
+                                    } else {
+                                        // Fallback icon
+                                        Image(systemName: content.imageIcon)
+                                            .font(.title)
+                                            .foregroundColor(content.typeColor)
+                                    }
+                                }
                             )
                         
                         // Type Badge
@@ -476,13 +513,17 @@ struct SearchView: View {
                         Text(content.title)
                             .styled(.contentTitle)
                             .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(minHeight: 44) // Minimum height for 2 lines
                             .multilineTextAlignment(.leading)
                         
                         Text(content.displayCategory)
                             .styled(.captionText)
                             .lineLimit(1)
+                            .frame(height: 18)
                     }
                 }
+                .frame(maxWidth: .infinity)
                 .padding(SpacingTokens.cardInternalPadding)
                 .background(TataPlayColors.cardBackground)
                 .cornerRadius(LayoutConstants.cardCornerRadius)
