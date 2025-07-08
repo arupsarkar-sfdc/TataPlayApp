@@ -56,7 +56,7 @@ struct LiveTVView: View, CategoryTrackable, ContentTrackable {
                 loadPersonalizationRecommendations()
             }
             .onDisappear {
-                trackViewDisappeared()
+                //trackViewDisappeared()
             }
             
         }
