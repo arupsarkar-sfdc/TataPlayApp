@@ -310,6 +310,373 @@ TataPlayApp/
 4. **MyAccountView** - Complete account management with subscription and billing
 5. **Navigation System** - Full coordinator pattern with external link support
 
+
+# TataPlay iOS Data Cloud Integration
+
+## Overview
+
+This document outlines the implementation of real-time analytics tracking for Salesforce Einstein Personalization in the TataPlay iOS application. The analytics system captures user engagement data and prepares it for ingestion into Salesforce Data Cloud for hyper-personalized content recommendations.
+
+## Architecture Principles
+
+### 1. **Separation of Concerns**
+- **EventModels**: Pure data structures representing different user interactions
+- **AnalyticsService**: Centralized service managing event collection, batching, and transmission
+- **TrackingProtocol**: Clean interfaces allowing views to implement tracking without tight coupling
+- **View Integration**: Minimal, non-intrusive tracking calls in UI components
+
+### 2. **Protocol-Oriented Design**
+```swift
+// Views implement only the protocols they need
+struct LiveTVView: View, CategoryTrackable, ContentTrackable {
+    let viewName: String = "LiveTVView"
+    // Protocol methods auto-implemented with defaults
+}
+```
+
+### 3. **Rich Context Capture**
+Every event includes:
+- **Device Context**: Hardware, OS version, app version, network type
+- **Screen Context**: Current view, navigation path, view load time
+- **Session Context**: Session ID, user ID, timestamp
+- **Interaction Context**: Grid position, filter states, search queries
+
+### 4. **Flexible Event System**
+All events conform to `AnalyticsEvent` protocol:
+```swift
+protocol AnalyticsEvent {
+    var eventId: String { get }
+    var eventType: String { get }
+    var timestamp: Date { get }
+    func toDictionary() -> [String: Any]
+}
+```
+
+### 5. **Batching & Performance**
+- Events queued locally to prevent API spam
+- Automatic flushing every 30 seconds or when queue reaches 100 events
+- Background/foreground lifecycle handling
+- Non-blocking UI operations
+
+## Project Structure
+
+```
+Einstein/
+├── Analytics/
+│   ├── EventModels.swift           # All event data structures
+│   ├── AnalyticsService.swift      # Core tracking service
+│   └── TrackingProtocol.swift      # View integration protocols
+├── Models/
+└── PersonalizationEngine/
+```
+
+## Event Types Implemented
+
+### 1. **Category Selection Events**
+Tracks when users select filters (channel categories, content types):
+```swift
+// Automatically tracked when implementing CategoryTrackable
+trackCategorySelection(
+    selectedCategory: "Sports",
+    previousCategory: "All", 
+    availableCategories: allCategories,
+    selectionIndex: 2
+)
+```
+
+**Captured Data:**
+- Selected and previous categories
+- All available options for context
+- Selection index position
+- Time since last selection
+- Category type (channel_category vs content_type)
+
+### 2. **Content Click Events**
+Tracks interactions with channels, movies, shows:
+```swift
+// Rich metadata automatically captured
+trackContentClick(
+    contentId: "channel_123",
+    contentTitle: "Star Sports 1",
+    contentType: "channel",
+    contentCategory: "Sports",
+    gridPosition: 3,
+    sectionName: "channel_grid",
+    totalItemsInSection: 25,
+    isAboveFold: true,
+    additionalMetadata: ["isHD": true, "isLive": true]
+)
+```
+
+**Captured Data:**
+- Content identification and metadata
+- Grid position and section context
+- Above-fold visibility tracking
+- Content-specific data (HD status, live status, current program)
+- Active filters and search context
+
+### 3. **Search Events**
+Tracks search queries and result interactions:
+```swift
+// Search input tracking
+trackSearchQuery(
+    query: "cricket highlights",
+    resultsCount: 15,
+    selectedFilters: ["contentType": "Sports"]
+)
+
+// Search result click tracking
+trackSearchResultClick(
+    query: "cricket highlights",
+    clickedPosition: 2,
+    contentId: "content_456",
+    contentTitle: "IPL Highlights"
+)
+```
+
+**Captured Data:**
+- Search queries and result counts
+- Click-through positions
+- Applied filters during search
+- Search duration and user behavior patterns
+
+### 4. **View Lifecycle Events**
+Tracks view appearances with context:
+```swift
+// Automatically tracked with onAppear/onDisappear
+ViewAppearanceEvent(
+    viewName: "LiveTVView",
+    selectedCategory: "Entertainment", 
+    totalChannels: 25,
+    screenContext: currentContext
+)
+```
+
+**Captured Data:**
+- View entry/exit patterns
+- Initial state when view loads
+- Session duration per view
+- Navigation patterns
+
+### 5. **Button Click Events**
+Tracks UI element interactions:
+```swift
+GenericButtonClickEvent(
+    buttonName: "channel_guide",
+    buttonType: "toolbar_button",
+    screenContext: currentContext
+)
+```
+
+## Implementation Guide
+
+### Step 1: Make Your View Trackable
+```swift
+struct MyView: View, CategoryTrackable, ContentTrackable {
+    let viewName: String = "MyView"
+    
+    var body: some View {
+        // Your UI code
+    }
+}
+```
+
+### Step 2: Track Category Selections
+```swift
+CategoryFilterChip(category: category, isSelected: isSelected) {
+    // Track before state change
+    trackCategorySelection(
+        selectedCategory: category.rawValue,
+        previousCategory: previousCategory,
+        availableCategories: allCategories,
+        selectionIndex: index
+    )
+    
+    selectedCategory = category
+}
+```
+
+### Step 3: Track Content Clicks
+```swift
+ForEach(Array(content.enumerated()), id: \.element.id) { index, item in
+    ContentCard(item: item) {
+        // Track with position and metadata
+        let metadata: [String: Any] = [
+            "isHD": item.isHD,
+            "genre": item.genre
+        ]
+        
+        analyticsService.trackContentClick(
+            contentId: item.id,
+            contentTitle: item.title,
+            contentType: "movie",
+            contentCategory: item.genre,
+            contentMetadata: ContentMetadata(/* ... */),
+            clickPosition: ClickPosition(
+                gridPosition: index,
+                sectionName: "featured_content",
+                totalItemsInSection: content.count,
+                isAboveFold: index < 4
+            ),
+            contextualData: ContextualData(/* ... */),
+            screenContext: createScreenContext()
+        )
+        
+        // Navigate after tracking
+        navigate(to: item)
+    }
+}
+```
+
+### Step 4: Add Lifecycle Tracking
+```swift
+.onAppear {
+    trackViewAppeared()
+    
+    analyticsService.trackEvent(
+        ViewAppearanceEvent(/* view-specific context */)
+    )
+}
+.onDisappear {
+    trackViewDisappeared()
+}
+```
+
+## Data Flow Architecture
+
+```
+User Interaction
+       ↓
+View Protocol Method
+       ↓
+AnalyticsService.trackEvent()
+       ↓
+Event Queue (Local Storage)
+       ↓
+Batch Flush (Every 30s)
+       ↓
+[Future] Salesforce Data Cloud API
+       ↓
+Einstein Personalization Engine
+       ↓
+Hyper-Personalized Recommendations
+```
+
+## Console Output Format
+
+Each tracked event produces detailed console logs:
+
+```
+============================================================
+🎯 ANALYTICS EVENT TRACKED
+============================================================
+📋 Event Type: category_selected
+🆔 Event ID: ABC123-DEF456-GHI789
+⏰ Timestamp: 2025-07-08T10:30:00Z
+👤 User ID: user_12345
+📱 Session ID: session_789
+📦 Full Payload:
+{
+  "eventId": "ABC123-DEF456-GHI789",
+  "eventType": "category_selected",
+  "timestamp": "2025-07-08T10:30:00Z",
+  "userId": "user_12345",
+  "sessionId": "session_789",
+  "deviceContext": {
+    "deviceType": "iPhone",
+    "osVersion": "17.0",
+    "appVersion": "1.0.0",
+    "deviceId": "device_456",
+    "networkType": "WiFi"
+  },
+  "screenContext": {
+    "currentView": "LiveTVView",
+    "navigationPath": [],
+    "viewLoadTime": "2025-07-08T10:25:00Z"
+  },
+  "selectedCategory": "Sports",
+  "previousCategory": "All",
+  "categoryType": "channel_category",
+  "availableOptions": ["All", "Entertainment", "Sports", "News"],
+  "selectionIndex": 2,
+  "timeSinceLastSelection": 15.3
+}
+============================================================
+```
+
+## Salesforce Integration Preparation
+
+### Data Cloud Ingestion Ready
+All events are structured for Salesforce Data Cloud ingestion:
+- **Standard Fields**: Event ID, timestamp, user ID, session ID
+- **Device Context**: For segmentation and device-specific personalization  
+- **Behavioral Data**: Click patterns, preferences, engagement metrics
+- **Content Affinity**: Category preferences, content type preferences
+- **Session Analytics**: Usage patterns, view duration, navigation flows
+
+### Einstein Personalization Mapping
+Events map to Einstein Personalization concepts:
+- **User Profile**: Device context + session patterns
+- **Content Affinity**: Category selections + content clicks
+- **Behavioral Patterns**: Search queries + click-through rates
+- **Contextual Signals**: Time-based patterns + filter preferences
+
+## Testing & Validation
+
+### Current Implementation
+- ✅ **LiveTVView**: Category filters, channel clicks, search, lifecycle
+- ✅ **SearchView**: Content type filters, search queries, result clicks, lifecycle
+- ✅ **Rich Console Logging**: Detailed event inspection during development
+- ✅ **Batch Processing**: Queue management and periodic flushing
+- ✅ **Session Management**: Automatic session generation and lifecycle handling
+
+### Validation Checklist
+- [ ] Event payloads contain all required fields
+- [ ] Grid positions accurately track user interaction patterns
+- [ ] Filter states correctly captured in contextual data
+- [ ] Search query attribution properly maintained
+- [ ] Session boundaries correctly identified
+- [ ] Device context accurately captured
+- [ ] Performance impact minimal on UI operations
+
+## Future Enhancements
+
+### Phase 2: Salesforce Integration
+- Replace console logging with Salesforce Data Cloud API calls
+- Implement retry logic and offline queuing
+- Add authentication and secure transmission
+- Set up real-time data streaming
+
+### Phase 3: Advanced Analytics
+- A/B testing framework integration
+- User journey mapping and funnel analysis
+- Predictive analytics for content recommendations
+- Real-time personalization feedback loops
+
+### Phase 4: Performance Optimization
+- Smart batching based on network conditions
+- Event prioritization for critical interactions
+- Background sync optimization
+- Memory usage optimization for large event queues
+
+---
+
+## Contributing
+
+When adding new trackable interactions:
+
+1. **Define Event Model**: Create new event struct implementing `AnalyticsEvent`
+2. **Add Service Method**: Extend `AnalyticsService` if needed
+3. **Update Protocol**: Add methods to relevant tracking protocols
+4. **Implement in View**: Add tracking calls at interaction points
+5. **Test Console Output**: Verify event structure and data accuracy
+
+## References
+
+- [Salesforce Data Cloud Real-Time Ingestion](https://help.salesforce.com/s/articleView?id=mktg.mc_persnl.htm&type=5)
+- [Einstein Personalization API](https://developer.salesforce.com/docs/marketing/einstein-personalization/guide/overview.html)
+
+
 ### **🎬 Entertainment App Capabilities:**
 - ✅ **Live TV streaming interface** with channel categories and EPG
 - ✅ **Content discovery** with personalized recommendations
