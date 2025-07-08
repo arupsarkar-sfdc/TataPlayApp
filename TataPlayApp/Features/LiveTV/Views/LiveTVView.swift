@@ -201,31 +201,148 @@ struct LiveTVView: View {
     private var sampleChannels: [MockChannel] {
         [
             // Entertainment Channels
-            MockChannel(id: "1", name: "Star Plus", category: .entertainment, isHD: true, isLive: true, currentProgram: "Anupamaa"),
-            MockChannel(id: "2", name: "Colors", category: .entertainment, isHD: true, isLive: true, currentProgram: "Bigg Boss"),
-            MockChannel(id: "3", name: "Zee TV", category: .entertainment, isHD: false, isLive: true, currentProgram: "Kumkum Bhagya"),
+            MockChannel(
+                id: "1",
+                name: "Star Plus",
+                category: .entertainment,
+                isHD: true,
+                isLive: true,
+                currentProgram: "Anupamaa",
+                logoImageName: "star_plus",
+                fallbackIcon: "star.fill"
+            ),
+            MockChannel(
+                id: "2",
+                name: "Colors",
+                category: .entertainment,
+                isHD: true,
+                isLive: true,
+                currentProgram: "Bigg Boss",
+                logoImageName: "colors",
+                fallbackIcon: "paintpalette.fill"
+            ),
+            MockChannel(
+                id: "3",
+                name: "Zee TV",
+                category: .entertainment,
+                isHD: false,
+                isLive: true,
+                currentProgram: "Kumkum Bhagya",
+                logoImageName: "zee_tv",
+                fallbackIcon: "tv.fill"
+            ),
             
             // Sports Channels
-            MockChannel(id: "4", name: "Star Sports 1", category: .sports, isHD: true, isLive: true, currentProgram: "Cricket Live"),
-            MockChannel(id: "5", name: "Sony Sports", category: .sports, isHD: true, isLive: true, currentProgram: "Football Match"),
+            MockChannel(
+                id: "4",
+                name: "Star Sports 1",
+                category: .sports,
+                isHD: true,
+                isLive: true,
+                currentProgram: "Cricket Live",
+                logoImageName: "star_sports",
+                fallbackIcon: "sportscourt.fill"
+            ),
+            MockChannel(
+                id: "5",
+                name: "Sony Sports",
+                category: .sports,
+                isHD: true,
+                isLive: true,
+                currentProgram: "Football Match",
+                logoImageName: "sony_sports",
+                fallbackIcon: "soccer.fill"
+            ),
             
             // News Channels
-            MockChannel(id: "6", name: "Times Now", category: .news, isHD: true, isLive: true, currentProgram: "Breaking News"),
-            MockChannel(id: "7", name: "Republic TV", category: .news, isHD: false, isLive: true, currentProgram: "Debate Tonight"),
+            MockChannel(
+                id: "6",
+                name: "Times Now",
+                category: .news,
+                isHD: true,
+                isLive: true,
+                currentProgram: "Breaking News",
+                logoImageName: "times_now",
+                fallbackIcon: "newspaper.fill"
+            ),
+            MockChannel(
+                id: "7",
+                name: "Republic TV",
+                category: .news,
+                isHD: false,
+                isLive: true,
+                currentProgram: "Debate Tonight",
+                logoImageName: "republic",
+                fallbackIcon: "megaphone.fill"
+            ),
             
             // Kids Channels
-            MockChannel(id: "8", name: "Cartoon Network", category: .kids, isHD: true, isLive: true, currentProgram: "Tom & Jerry"),
-            MockChannel(id: "9", name: "Disney Channel", category: .kids, isHD: true, isLive: true, currentProgram: "Mickey Mouse"),
+            MockChannel(
+                id: "8",
+                name: "Cartoon Network",
+                category: .kids,
+                isHD: true,
+                isLive: true,
+                currentProgram: "Tom & Jerry",
+                logoImageName: "cartoon_network",
+                fallbackIcon: "face_smiling.fill"
+            ),
+            MockChannel(
+                id: "9",
+                name: "Disney Channel",
+                category: .kids,
+                isHD: true,
+                isLive: true,
+                currentProgram: "Mickey Mouse",
+                logoImageName: "disney_channel",
+                fallbackIcon: "sparkles"
+            ),
             
             // Movies
-            MockChannel(id: "10", name: "Star Gold", category: .movies, isHD: true, isLive: true, currentProgram: "Bollywood Blockbuster"),
-            MockChannel(id: "11", name: "Sony Max", category: .movies, isHD: false, isLive: true, currentProgram: "Action Movie"),
+            MockChannel(
+                id: "10",
+                name: "Star Gold",
+                category: .movies,
+                isHD: true,
+                isLive: true,
+                currentProgram: "Bollywood Blockbuster",
+                logoImageName: "star_gold",
+                fallbackIcon: "film.fill"
+            ),
+            MockChannel(
+                id: "11",
+                name: "Sony Max",
+                category: .movies,
+                isHD: false,
+                isLive: true,
+                currentProgram: "Action Movie",
+                logoImageName: "sony_max",
+                fallbackIcon: "play.rectangle.fill"
+            ),
             
             // Music
-            MockChannel(id: "12", name: "MTV", category: .music, isHD: true, isLive: true, currentProgram: "Music Videos"),
+            MockChannel(
+                id: "12",
+                name: "MTV",
+                category: .music,
+                isHD: true,
+                isLive: true,
+                currentProgram: "Music Videos",
+                logoImageName: "mtv",
+                fallbackIcon: "music.note"
+            ),
             
             // Regional
-            MockChannel(id: "13", name: "Asianet", category: .regional, isHD: true, isLive: true, currentProgram: "Malayalam Show"),
+            MockChannel(
+                id: "13",
+                name: "Asianet",
+                category: .regional,
+                isHD: true,
+                isLive: true,
+                currentProgram: "Malayalam Show",
+                logoImageName: "asianet",
+                fallbackIcon: "globe.asia.australia.fill"
+            ),
         ]
     }
 
@@ -237,11 +354,8 @@ struct LiveTVView: View {
         let isHD: Bool
         let isLive: Bool
         let currentProgram: String
-        
-        var logoImageName: String {
-            // In production, this would be actual channel logos
-            category.iconName
-        }
+        let logoImageName: String? // Actual logo image asset name
+        let fallbackIcon: String   // System icon for fallback
     }
     
     // MARK: - Supporting UI Components
@@ -291,31 +405,68 @@ struct LiveTVView: View {
                             .fill(channel.category.color.opacity(0.1))
                             .frame(height: 80)
                             .overlay(
-                                Image(systemName: channel.logoImageName)
-                                    .font(.title)
-                                    .foregroundColor(channel.category.color)
+                                Group {
+                                    if let logoImageName = channel.logoImageName {
+                                        ZStack {
+                                            // Actual Channel Logo
+                                            Image(logoImageName)
+                                                .resizable()
+                                                .aspectRatio(contentMode: .fit)
+                                                .frame(height: 60)
+                                                .clipped()
+                                            
+                                            // Subtle gradient overlay for better badge visibility
+                                            LinearGradient(
+                                                gradient: Gradient(colors: [
+                                                    Color.black.opacity(0.0),
+                                                    Color.black.opacity(0.1)
+                                                ]),
+                                                startPoint: .center,
+                                                endPoint: .topTrailing
+                                            )
+                                        }
+                                        .cornerRadius(LayoutConstants.smallCardCornerRadius)
+                                    } else {
+                                        // Fallback system icon
+                                        Image(systemName: channel.fallbackIcon)
+                                            .font(.title)
+                                            .foregroundColor(channel.category.color)
+                                    }
+                                }
                             )
                         
-                        // HD Badge
-                        if channel.isHD {
-                            Text("HD")
-                                .font(.caption2)
-                                .fontWeight(.bold)
-                                .foregroundColor(.white)
+                        VStack(alignment: .trailing, spacing: 4) {
+                            // HD Badge
+                            if channel.isHD {
+                                Text("HD")
+                                    .font(.caption2)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(TataPlayColors.accentGradient)
+                                    .cornerRadius(4)
+                            }
+                            
+                            // Live Indicator
+                            if channel.isLive {
+                                HStack(spacing: 4) {
+                                    Circle()
+                                        .fill(TataPlayColors.liveIndicator)
+                                        .frame(width: 6, height: 6)
+                                    
+                                    Text("LIVE")
+                                        .font(.caption2)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.white)
+                                }
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
-                                .background(TataPlayColors.accentGradient)
+                                .background(TataPlayColors.liveIndicator)
                                 .cornerRadius(4)
-                                .offset(x: -4, y: 4)
+                            }
                         }
-                        
-                        // Live Indicator
-                        if channel.isLive {
-                            Circle()
-                                .fill(TataPlayColors.liveIndicator)
-                                .frame(width: 8, height: 8)
-                                .offset(x: -4, y: 4)
-                        }
+                        .offset(x: -4, y: 4)
                     }
                     
                     // Channel Info

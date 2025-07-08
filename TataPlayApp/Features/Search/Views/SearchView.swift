@@ -272,8 +272,6 @@ struct SearchView: View {
     }
 
     private var contentGridColumns: [GridItem] {
-        
-//        GridHelpers.contentGrid()
         [
             GridItem(.flexible(), spacing: SpacingTokens.gridColumnSpacing),
             GridItem(.flexible(), spacing: SpacingTokens.gridColumnSpacing)
