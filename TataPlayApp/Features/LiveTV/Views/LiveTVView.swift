@@ -10,6 +10,10 @@ struct LiveTVView: View, CategoryTrackable, ContentTrackable {
     @State private var showingChannelGuide = false
     @State private var searchText = ""
     let viewName: String = "LiveTVView"
+    // personalization properties
+    @StateObject private var personalizationService = PersonalizationService.shared
+    @State private var recommendations: PersonalizationResponse?
+    @State private var isLoadingRecommendations = false
     
     var body: some View {
         NavigationStack(path: $navigationCoordinator.watchNavigationPath) {
@@ -48,6 +52,8 @@ struct LiveTVView: View, CategoryTrackable, ContentTrackable {
                         sessionId: AnalyticsService.shared.getSessionInfo()["sessionId"] as? String ?? ""
                     )
                 )
+                // Load personalization recommendations
+                loadPersonalizationRecommendations()
             }
             .onDisappear {
                 trackViewDisappeared()
@@ -184,7 +190,7 @@ struct LiveTVView: View, CategoryTrackable, ContentTrackable {
         ScrollView {
             LazyVGrid(columns: channelGridColumns, spacing: SpacingTokens.gridRowSpacing) {
                 ForEach(Array(filteredChannels.enumerated()), id: \.element.id) { index, channel in
-                    ChannelCard(channel: channel) {
+                    ChannelCard(channel: channel, recommendations: recommendations) {
                         // Track channel click before navigation
                         // Track channel click manually
                         let metadata: [String: Any] = [
@@ -253,11 +259,60 @@ struct LiveTVView: View, CategoryTrackable, ContentTrackable {
             sampleChannels :
             sampleChannels.filter { $0.category == selectedCategory }
         
-        if searchText.isEmpty {
-            return categoryFiltered
-        } else {
-            return categoryFiltered.filter {
-                $0.name.localizedCaseInsensitiveContains(searchText)
+        let searchFiltered = searchText.isEmpty ?
+            categoryFiltered :
+            categoryFiltered.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        
+        // Apply personalization ordering
+        return applyPersonalizationOrdering(to: searchFiltered)
+    }
+
+    // MARK: - Personalization Integration
+    private func applyPersonalizationOrdering(to channels: [MockChannel]) -> [MockChannel] {
+        guard let recommendations = recommendations else {
+            // No recommendations loaded yet, return original order
+            return channels
+        }
+        
+        return channels.sorted { channel1, channel2 in
+            let score1 = recommendations.getScore(for: channel1.id) ?? 0.0
+            let score2 = recommendations.getScore(for: channel2.id) ?? 0.0
+            
+            // Sort by personalization score (highest first)
+            if score1 != score2 {
+                return score1 > score2
+            }
+            
+            // Fallback to alphabetical if scores are equal
+            return channel1.name < channel2.name
+        }
+    }
+    
+    private func loadPersonalizationRecommendations() {
+        guard !isLoadingRecommendations else { return }
+        
+        isLoadingRecommendations = true
+        
+        Task {
+            do {
+                let response = try await personalizationService.getChannelRecommendations()
+                
+                await MainActor.run {
+                    self.recommendations = response
+                    self.isLoadingRecommendations = false
+                    
+                    print("🎯 LiveTVView: Loaded \(response.recommendations.count) personalized recommendations")
+                    print("📊 Top 3 recommendations:")
+                    for (index, rec) in response.topRecommendations.prefix(3).enumerated() {
+                        print("   \(index + 1). Channel \(rec.channelId) - Score: \(String(format: "%.2f", rec.score))")
+                    }
+                }
+                
+            } catch {
+                await MainActor.run {
+                    self.isLoadingRecommendations = false
+                    print("❌ Failed to load personalization recommendations: \(error)")
+                }
             }
         }
     }
@@ -471,7 +526,13 @@ struct LiveTVView: View, CategoryTrackable, ContentTrackable {
 
     struct ChannelCard: View {
         let channel: MockChannel
+        let recommendations: PersonalizationResponse? // Move this parameter
         let action: () -> Void
+        
+        private func isHighlyRecommended(channel: MockChannel) -> Bool {
+            guard let recommendations = recommendations else { return false }
+            return recommendations.isRecommended(channelId: channel.id, threshold: 0.8)
+        }
         
         var body: some View {
             Button(action: action) {
@@ -514,6 +575,33 @@ struct LiveTVView: View, CategoryTrackable, ContentTrackable {
                             )
                         
                         VStack(alignment: .trailing, spacing: 4) {
+                            // Personalization Badge (highest priority)
+                            if isHighlyRecommended(channel: channel) {
+                                HStack(spacing: 2) {
+                                    Image(systemName: "star.fill")
+                                        .font(.caption2)
+                                        .foregroundColor(.white)
+                                    
+                                    Text("FOR YOU")
+                                        .font(.caption2)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.white)
+                                }
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [
+                                            Color.purple.opacity(0.8),
+                                            Color.blue.opacity(0.8)
+                                        ]),
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .cornerRadius(4)
+                            }
+                            
                             // HD Badge
                             if channel.isHD {
                                 Text("HD")
@@ -544,7 +632,7 @@ struct LiveTVView: View, CategoryTrackable, ContentTrackable {
                                 .cornerRadius(4)
                             }
                         }
-                        .offset(x: -4, y: 4)
+                        .offset(x: -4, y: 4) // Add this missing offset
                     }
                     
                     // Channel Info

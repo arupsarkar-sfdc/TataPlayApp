@@ -12,6 +12,12 @@ struct SearchView: View, CategoryTrackable, SearchTrackable {
     @State private var isSearching = false
     let viewName: String = "SearchView"
     
+
+    // personalization properties:
+    @StateObject private var personalizationService = PersonalizationService.shared
+    @State private var contentRecommendations: PersonalizationResponse?
+    @State private var isLoadingRecommendations = false
+    
     var body: some View {
         NavigationStack(path: $navigationCoordinator.searchNavigationPath) {
             VStack(spacing: 0) {
@@ -54,6 +60,8 @@ struct SearchView: View, CategoryTrackable, SearchTrackable {
                         sessionId: AnalyticsService.shared.getSessionInfo()["sessionId"] as? String ?? ""
                     )
                 )
+                // Load content recommendations
+                loadContentRecommendations()
             }
             .onDisappear {
                 trackViewDisappeared()
@@ -219,10 +227,109 @@ struct SearchView: View, CategoryTrackable, SearchTrackable {
         isSearching = false
     }
     
+    private func trackPersonalizedContentClick(content: MockSearchContent, position: Int) {
+        let metadata = ContentMetadata(
+            isHD: nil,
+            isLive: nil,
+            currentProgram: nil,
+            genre: content.category,
+            language: nil,
+            rating: nil,
+            duration: nil
+        )
+        
+        let clickPosition = ClickPosition(
+            gridPosition: position,
+            sectionName: "personalized_for_you",
+            totalItemsInSection: personalizedContent.count,
+            isAboveFold: position < 4
+        )
+        
+        let contextualData = ContextualData(
+            activeFilters: ["contentType": selectedContentType.rawValue],
+            searchQuery: nil,
+            timeSpentOnScreen: 0,
+            previousAction: nil,
+            recommendationSource: "personalized"
+        )
+        
+        analyticsService.trackContentClick(
+            contentId: content.id,
+            contentTitle: content.title,
+            contentType: content.type.rawValue,
+            contentCategory: content.category,
+            contentMetadata: metadata,
+            clickPosition: clickPosition,
+            contextualData: contextualData,
+            screenContext: createScreenContext()
+        )
+    }
+    
+    private func loadContentRecommendations() {
+        guard !isLoadingRecommendations else { return }
+        
+        isLoadingRecommendations = true
+        
+        Task {
+            do {
+                let response = try await personalizationService.getContentRecommendations(for: "mixed")
+                
+                await MainActor.run {
+                    self.contentRecommendations = response
+                    self.isLoadingRecommendations = false
+                    
+                    print("🎯 SearchView: Loaded \(response.recommendations.count) content recommendations")
+                    print("📊 Top 3 content recommendations:")
+                    for (index, rec) in response.topRecommendations.prefix(3).enumerated() {
+                        print("   \(index + 1). Content \(rec.channelId) - Score: \(String(format: "%.2f", rec.score))")
+                    }
+                }
+                
+            } catch {
+                await MainActor.run {
+                    self.isLoadingRecommendations = false
+                    print("❌ Failed to load content recommendations: \(error)")
+                }
+            }
+        }
+    }
+    
     // MARK: - Search Suggestions Section
     private var searchSuggestionsSection: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: SpacingTokens.sectionSpacing) {
+                // Recent Searches
+                if let recommendations = contentRecommendations, !recommendations.recommendations.isEmpty {
+                    VStack(alignment: .leading, spacing: SpacingTokens.lg) {
+                        HStack {
+                            Image(systemName: "star.fill")
+                                .foregroundColor(TataPlayColors.primary)
+                                .font(.title3)
+                            
+                            Text("For You")
+                                .styled(.sectionHeading)
+                                .foregroundColor(TataPlayColors.primary)
+                            
+                            Spacer()
+                            
+                            if isLoadingRecommendations {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                            }
+                        }
+                        
+                        LazyVGrid(columns: contentGridColumns, spacing: SpacingTokens.gridRowSpacing) {
+                            ForEach(Array(personalizedContent.enumerated()), id: \.element.id) { index, content in
+                                PersonalizedContentCard(content: content) {
+                                    // Track personalized content click
+                                    trackPersonalizedContentClick(content: content, position: index)
+                                    navigationCoordinator.navigateToContentDetail(contentId: content.id, in: .search)
+                                }
+                            }
+                        }
+                    }
+                }
+                
                 // Recent Searches
                 if !recentSearches.isEmpty {
                     VStack(alignment: .leading, spacing: SpacingTokens.lg) {
@@ -453,6 +560,43 @@ struct SearchView: View, CategoryTrackable, SearchTrackable {
             MockSearchContent(id: "9", title: "RRR", type: .movies, category: "Action", imageIcon: "film.fill", imageName: "pathan_poster"),
             MockSearchContent(id: "10", title: "The Family Man", type: .series, category: "Thriller", imageIcon: "person.fill", imageName: "pathan_poster")
         ]
+    }
+    
+    private var personalizedContent: [MockSearchContent] {
+        guard let recommendations = contentRecommendations else {
+            // Return a subset of popular content if no recommendations
+            return Array(popularContent.prefix(4))
+        }
+        
+        // Create personalized content based on recommendations
+        return popularContent.sorted { content1, content2 in
+            // Simulate personalization scoring based on content type and category
+            let score1 = getPersonalizationScore(for: content1)
+            let score2 = getPersonalizationScore(for: content2)
+            return score1 > score2
+        }
+    }
+
+    private func getPersonalizationScore(for content: MockSearchContent) -> Double {
+        // Simulate scoring based on content type and user preferences
+        var score = 0.5
+        
+        // Boost sports content for sports fans
+        if content.type == .sports {
+            score += 0.3
+        }
+        
+        // Boost entertainment content
+        if content.type == .programs && content.category.contains("Entertainment") {
+            score += 0.2
+        }
+        
+        // Boost movies
+        if content.type == .movies {
+            score += 0.25
+        }
+        
+        return score + Double.random(in: -0.1...0.1) // Add some randomization
     }
     
     // MARK: - Navigation Destination Handler
@@ -809,6 +953,106 @@ struct SearchView: View, CategoryTrackable, SearchTrackable {
                     .padding(.vertical, SpacingTokens.sm)
                     .background(isSelected ? TataPlayColors.primary : TataPlayColors.cardBackground)
                     .cornerRadius(16)
+            }
+            .buttonStyle(PlainButtonStyle())
+        }
+    }
+    
+    struct PersonalizedContentCard: View {
+        let content: MockSearchContent
+        let action: () -> Void
+        
+        var body: some View {
+            Button(action: action) {
+                VStack(alignment: .leading, spacing: SpacingTokens.sm) {
+                    // Content Icon and Personalization Badge
+                    ZStack(alignment: .topTrailing) {
+                        RoundedRectangle(cornerRadius: LayoutConstants.smallCardCornerRadius)
+                            .fill(content.typeColor.opacity(0.1))
+                            .frame(height: 100)
+                            .overlay(
+                                Group {
+                                    if let imageName = content.imageName {
+                                        ZStack {
+                                            // Image
+                                            Image(imageName)
+                                                .resizable()
+                                                .aspectRatio(contentMode: .fill)
+                                                .frame(height: 120)
+                                                .clipped()
+                                            
+                                            // Subtle gradient overlay
+                                            LinearGradient(
+                                                gradient: Gradient(colors: [
+                                                    Color.black.opacity(0.0),
+                                                    Color.black.opacity(0.2)
+                                                ]),
+                                                startPoint: .center,
+                                                endPoint: .topTrailing
+                                            )
+                                        }
+                                        .cornerRadius(LayoutConstants.smallCardCornerRadius)
+                                    } else {
+                                        // Fallback icon
+                                        Image(systemName: content.imageIcon)
+                                            .font(.title)
+                                            .foregroundColor(content.typeColor)
+                                    }
+                                }
+                            )
+                        
+                        // Personalization Badge
+                        HStack(spacing: 2) {
+                            Image(systemName: "star.fill")
+                                .font(.caption2)
+                                .foregroundColor(.white)
+                            
+                            Text("FOR YOU")
+                                .font(.caption2)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                        }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            LinearGradient(
+                                gradient: Gradient(colors: [
+                                    Color.purple.opacity(0.8),
+                                    Color.blue.opacity(0.8)
+                                ]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .cornerRadius(4)
+                        .offset(x: -4, y: 4)
+                    }
+                    
+                    // Content Info
+                    VStack(alignment: .leading, spacing: SpacingTokens.xs) {
+                        Text(content.title)
+                            .styled(.contentTitle)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(minHeight: 44)
+                            .multilineTextAlignment(.leading)
+                        
+                        Text(content.displayCategory)
+                            .styled(.captionText)
+                            .lineLimit(1)
+                            .frame(height: 18)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(SpacingTokens.cardInternalPadding)
+                .background(TataPlayColors.cardBackground)
+                .cornerRadius(LayoutConstants.cardCornerRadius)
+                .shadow(
+                    color: .black.opacity(LayoutConstants.cardShadowOpacity),
+                    radius: LayoutConstants.cardShadowRadius,
+                    x: LayoutConstants.cardShadowOffset.width,
+                    y: LayoutConstants.cardShadowOffset.height
+                )
             }
             .buttonStyle(PlainButtonStyle())
         }
