@@ -64,7 +64,7 @@ struct SearchView: View, CategoryTrackable, SearchTrackable {
                 loadContentRecommendations()
             }
             .onDisappear {
-                trackViewDisappeared()
+                //trackViewDisappeared()
             }
         }
     }
