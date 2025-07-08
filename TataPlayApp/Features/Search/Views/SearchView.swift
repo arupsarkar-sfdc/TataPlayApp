@@ -3,13 +3,14 @@ import SwiftUI
 // MARK: - SearchView
 // Content search and discovery based on JSON: search_content, content_discovery
 
-struct SearchView: View {
+struct SearchView: View, CategoryTrackable, SearchTrackable {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var navigationCoordinator: NavigationCoordinator
     @State private var searchText = ""
     @State private var selectedContentType: ContentType = .all
     @State private var showingFilters = false
     @State private var isSearching = false
+    let viewName: String = "SearchView"
     
     var body: some View {
         NavigationStack(path: $navigationCoordinator.searchNavigationPath) {
@@ -37,6 +38,25 @@ struct SearchView: View {
             }
             .navigationDestination(for: String.self) { destination in
                 destinationView(for: destination)
+            }
+            .onAppear {
+                trackViewAppeared()
+                
+                // Track specific SearchView appearance
+                analyticsService.trackEvent(
+                    SearchViewAppearanceEvent(
+                        viewName: viewName,
+                        selectedContentType: selectedContentType.rawValue,
+                        hasActiveSearch: !searchText.isEmpty,
+                        currentSearchQuery: searchText.isEmpty ? nil : searchText,
+                        screenContext: createScreenContext(),
+                        userId: nil,
+                        sessionId: AnalyticsService.shared.getSessionInfo()["sessionId"] as? String ?? ""
+                    )
+                )
+            }
+            .onDisappear {
+                trackViewDisappeared()
             }
         }
     }
@@ -93,7 +113,16 @@ struct SearchView: View {
                 
                 TextField("Search channels, shows, movies...", text: $searchText)
                     .font(TataPlayTypography.inputField)
-                    .onChange(of: searchText) { _ in
+                    .onChange(of: searchText) {
+                        // Track search query if not empty
+                        if !searchText.isEmpty {
+                            trackSearchQuery(
+                                query: searchText,
+                                resultsCount: filteredSearchResults.count,
+                                selectedFilters: ["contentType": selectedContentType.rawValue]
+                            )
+                        }
+                        
                         performSearch()
                     }
                 
@@ -135,6 +164,18 @@ struct SearchView: View {
                         contentType: contentType,
                         isSelected: selectedContentType == contentType
                     ) {
+                        // Track content type selection before changing state
+                        let previousContentType = selectedContentType.rawValue
+                        let allContentTypes = ContentType.allCases.map { $0.rawValue }
+                        let selectionIndex = ContentType.allCases.firstIndex(of: contentType) ?? 0
+                        
+                        trackCategorySelection(
+                            selectedCategory: contentType.rawValue,
+                            previousCategory: previousContentType != contentType.rawValue ? previousContentType : nil,
+                            availableCategories: allContentTypes,
+                            selectionIndex: selectionIndex
+                        )
+                        
                         selectedContentType = contentType
                         if !searchText.isEmpty {
                             performSearch()
@@ -205,8 +246,45 @@ struct SearchView: View {
                         .styled(.sectionHeading)
                     
                     LazyVGrid(columns: contentGridColumns, spacing: SpacingTokens.gridRowSpacing) {
-                        ForEach(popularContent, id: \.id) { content in
+                        ForEach(Array(popularContent.enumerated()), id: \.element.id) { index, content in
                             SearchContentCard(content: content) {
+                                // Track popular content click
+                                let metadata = ContentMetadata(
+                                    isHD: nil,
+                                    isLive: nil,
+                                    currentProgram: nil,
+                                    genre: content.category,
+                                    language: nil,
+                                    rating: nil,
+                                    duration: nil
+                                )
+                                
+                                let clickPosition = ClickPosition(
+                                    gridPosition: index,
+                                    sectionName: "popular_content",
+                                    totalItemsInSection: popularContent.count,
+                                    isAboveFold: index < 4
+                                )
+                                
+                                let contextualData = ContextualData(
+                                    activeFilters: ["contentType": selectedContentType.rawValue],
+                                    searchQuery: nil,
+                                    timeSpentOnScreen: 0,
+                                    previousAction: nil,
+                                    recommendationSource: "popular"
+                                )
+                                
+                                analyticsService.trackContentClick(
+                                    contentId: content.id,
+                                    contentTitle: content.title,
+                                    contentType: content.type.rawValue,
+                                    contentCategory: content.category,
+                                    contentMetadata: metadata,
+                                    clickPosition: clickPosition,
+                                    contextualData: contextualData,
+                                    screenContext: createScreenContext()
+                                )
+                                
                                 navigationCoordinator.navigateToContentDetail(contentId: content.id, in: .search)
                             }
                         }
@@ -251,8 +329,53 @@ struct SearchView: View {
                 
                 // Results Grid
                 LazyVGrid(columns: contentGridColumns, spacing: SpacingTokens.gridRowSpacing) {
-                    ForEach(filteredSearchResults, id: \.id) { content in
+                    ForEach(Array(filteredSearchResults.enumerated()), id: \.element.id) { index, content in
                         SearchContentCard(content: content) {
+                            // Track search result click using SearchTrackable protocol
+                            trackSearchResultClick(
+                                query: searchText,
+                                clickedPosition: index,
+                                contentId: content.id,
+                                contentTitle: content.title
+                            )
+                            
+                            // Track detailed content click using AnalyticsService directly
+                            let metadata = ContentMetadata(
+                                isHD: nil,
+                                isLive: nil,
+                                currentProgram: nil,
+                                genre: content.category,
+                                language: nil,
+                                rating: nil,
+                                duration: nil
+                            )
+                            
+                            let clickPosition = ClickPosition(
+                                gridPosition: index,
+                                sectionName: "search_results",
+                                totalItemsInSection: filteredSearchResults.count,
+                                isAboveFold: index < 4
+                            )
+                            
+                            let contextualData = ContextualData(
+                                activeFilters: ["contentType": selectedContentType.rawValue],
+                                searchQuery: searchText,
+                                timeSpentOnScreen: 0,
+                                previousAction: nil,
+                                recommendationSource: "search_results"
+                            )
+                            
+                            analyticsService.trackContentClick(
+                                contentId: content.id,
+                                contentTitle: content.title,
+                                contentType: content.type.rawValue,
+                                contentCategory: content.category,
+                                contentMetadata: metadata,
+                                clickPosition: clickPosition,
+                                contextualData: contextualData,
+                                screenContext: createScreenContext()
+                            )
+                            
                             addToRecentSearches(searchText)
                             navigationCoordinator.navigateToContentDetail(contentId: content.id, in: .search)
                         }

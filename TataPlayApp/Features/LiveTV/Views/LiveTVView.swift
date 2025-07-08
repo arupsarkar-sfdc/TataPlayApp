@@ -3,12 +3,13 @@ import SwiftUI
 // MARK: - LiveTVView
 // Live TV streaming interface based on JSON key_features: live_tv_streaming, channel_management
 
-struct LiveTVView: View {
+struct LiveTVView: View, CategoryTrackable, ContentTrackable {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var navigationCoordinator: NavigationCoordinator
     @State private var selectedCategory: ChannelCategory = .all
     @State private var showingChannelGuide = false
     @State private var searchText = ""
+    let viewName: String = "LiveTVView"
     
     var body: some View {
         NavigationStack(path: $navigationCoordinator.watchNavigationPath) {
@@ -33,6 +34,25 @@ struct LiveTVView: View {
             .navigationDestination(for: String.self) { destination in
                 destinationView(for: destination)
             }
+            .onAppear {
+                trackViewAppeared()
+                
+                // Track specific LiveTV view appearance
+                analyticsService.trackEvent(
+                    ViewAppearanceEvent(
+                        viewName: viewName,
+                        selectedCategory: selectedCategory.rawValue,
+                        totalChannels: sampleChannels.count,
+                        screenContext: createScreenContext(),
+                        userId: nil,
+                        sessionId: AnalyticsService.shared.getSessionInfo()["sessionId"] as? String ?? ""
+                    )
+                )
+            }
+            .onDisappear {
+                trackViewDisappeared()
+            }
+            
         }
     }
     
@@ -105,6 +125,21 @@ struct LiveTVView: View {
                 
                 TextField("Search channels...", text: $searchText)
                     .font(TataPlayTypography.inputField)
+                    .onChange(of: searchText) {
+                        // Track search input with debounce
+                        if !searchText.isEmpty {
+                            analyticsService.trackSearch(
+                                searchQuery: searchText,
+                                searchType: "text_input",
+                                resultsCount: filteredChannels.count,
+                                selectedFilters: ["category": selectedCategory.rawValue],
+                                searchDuration: nil,
+                                resultClicked: false,
+                                clickedResultPosition: nil,
+                                screenContext: createScreenContext()
+                            )
+                        }
+                    }
             }
             .padding(SpacingTokens.inputPadding)
             .background(TataPlayColors.cardBackground)
@@ -123,6 +158,18 @@ struct LiveTVView: View {
                         category: category,
                         isSelected: selectedCategory == category
                     ) {
+                        // Track category selection before changing state
+                        let previousCategory = selectedCategory.rawValue
+                        let allCategories = ChannelCategory.allCases.map { $0.rawValue }
+                        let selectionIndex = ChannelCategory.allCases.firstIndex(of: category) ?? 0
+                        
+                        trackCategorySelection(
+                            selectedCategory: category.rawValue,
+                            previousCategory: previousCategory != category.rawValue ? previousCategory : nil,
+                            availableCategories: allCategories,
+                            selectionIndex: selectionIndex
+                        )
+                        
                         selectedCategory = category
                     }
                 }
@@ -136,8 +183,28 @@ struct LiveTVView: View {
     private var channelGridSection: some View {
         ScrollView {
             LazyVGrid(columns: channelGridColumns, spacing: SpacingTokens.gridRowSpacing) {
-                ForEach(filteredChannels, id: \.id) { channel in
+                ForEach(Array(filteredChannels.enumerated()), id: \.element.id) { index, channel in
                     ChannelCard(channel: channel) {
+                        // Track channel click before navigation
+                        // Track channel click manually
+                        let metadata: [String: Any] = [
+                            "isHD": channel.isHD,
+                            "isLive": channel.isLive,
+                            "currentProgram": channel.currentProgram
+                        ]
+
+                        trackContentClick(
+                            contentId: channel.id,
+                            contentTitle: channel.name,
+                            contentType: "channel",
+                            contentCategory: channel.category.rawValue,
+                            gridPosition: index,
+                            sectionName: "channel_grid",
+                            totalItemsInSection: filteredChannels.count,
+                            isAboveFold: index < 4,
+                            additionalMetadata: metadata
+                        )
+                        
                         navigationCoordinator.navigateToChannelDetail(channelId: channel.id, in: .watch)
                     }
                 }
@@ -150,6 +217,17 @@ struct LiveTVView: View {
     // MARK: - Channel Guide Button
     private var channelGuideButton: some View {
         Button(action: {
+            // Track channel guide button click
+            analyticsService.trackEvent(
+                GenericButtonClickEvent(
+                    buttonName: "channel_guide",
+                    buttonType: "toolbar_button",
+                    screenContext: createScreenContext(),
+                    userId: nil,
+                    sessionId: AnalyticsService.shared.getSessionInfo()["sessionId"] as? String ?? ""
+                )
+            )
+            
             showingChannelGuide = true
         }) {
             Image(systemName: "list.bullet.rectangle")
