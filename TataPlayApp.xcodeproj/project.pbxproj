@@ -8,6 +8,12 @@
 
 /* Begin PBXBuildFile section */
 		E6685BEF2E1C4C1F00E5B911 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = E6685BEE2E1C4C1F00E5B911 /* README.md */; };
+		E68EA8AB2E2AF07900FD01C2 /* Cdp.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = E68EA8A52E2AF05900FD01C2 /* Cdp.xcframework */; };
+		E68EA8AC2E2AF07900FD01C2 /* Cdp.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = E68EA8A52E2AF05900FD01C2 /* Cdp.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		E68EA8AE2E2AF07A00FD01C2 /* Personalization.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = E68EA8A92E2AF07400FD01C2 /* Personalization.xcframework */; };
+		E68EA8AF2E2AF07A00FD01C2 /* Personalization.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = E68EA8A92E2AF07400FD01C2 /* Personalization.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		E68EA8B02E2AF07C00FD01C2 /* SFMCSDK.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = E68EA8A72E2AF06500FD01C2 /* SFMCSDK.xcframework */; };
+		E68EA8B12E2AF07C00FD01C2 /* SFMCSDK.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = E68EA8A72E2AF06500FD01C2 /* SFMCSDK.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -27,11 +33,30 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		E68EA8AD2E2AF07900FD01C2 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				E68EA8B12E2AF07C00FD01C2 /* SFMCSDK.xcframework in Embed Frameworks */,
+				E68EA8AF2E2AF07A00FD01C2 /* Personalization.xcframework in Embed Frameworks */,
+				E68EA8AC2E2AF07900FD01C2 /* Cdp.xcframework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		E6685B042E1C45C200E5B911 /* TataPlayApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TataPlayApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E6685B122E1C45C300E5B911 /* TataPlayAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TataPlayAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		E6685B1C2E1C45C300E5B911 /* TataPlayAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TataPlayAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		E6685BEE2E1C4C1F00E5B911 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		E68EA8A52E2AF05900FD01C2 /* Cdp.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = Cdp.xcframework; sourceTree = "<group>"; };
+		E68EA8A72E2AF06500FD01C2 /* SFMCSDK.xcframework */ = {isa = PBXFileReference; expectedSignature = "AppleDeveloperProgram:RNQ52E7G3P:ExactTarget, Inc"; lastKnownFileType = wrapper.xcframework; path = SFMCSDK.xcframework; sourceTree = "<group>"; };
+		E68EA8A92E2AF07400FD01C2 /* Personalization.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = Personalization.xcframework; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -57,6 +82,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E68EA8B02E2AF07C00FD01C2 /* SFMCSDK.xcframework in Frameworks */,
+				E68EA8AB2E2AF07900FD01C2 /* Cdp.xcframework in Frameworks */,
+				E68EA8AE2E2AF07A00FD01C2 /* Personalization.xcframework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -80,6 +108,9 @@
 		E6685AFB2E1C45C200E5B911 = {
 			isa = PBXGroup;
 			children = (
+				E68EA8A52E2AF05900FD01C2 /* Cdp.xcframework */,
+				E68EA8A72E2AF06500FD01C2 /* SFMCSDK.xcframework */,
+				E68EA8A92E2AF07400FD01C2 /* Personalization.xcframework */,
 				E6685BEE2E1C4C1F00E5B911 /* README.md */,
 				E6685B062E1C45C200E5B911 /* TataPlayApp */,
 				E6685B152E1C45C300E5B911 /* TataPlayAppTests */,
@@ -108,6 +139,7 @@
 				E6685B002E1C45C200E5B911 /* Sources */,
 				E6685B012E1C45C200E5B911 /* Frameworks */,
 				E6685B022E1C45C200E5B911 /* Resources */,
+				E68EA8AD2E2AF07900FD01C2 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);

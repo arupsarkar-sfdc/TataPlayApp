@@ -3,6 +3,9 @@
 // Based on JSON navigation: Home, Watch, Search, My Account, More
 
 import SwiftUI
+import Cdp
+import SFMCSDK
+import Personalization
 
 @main
 struct TataPlayApp: App {
