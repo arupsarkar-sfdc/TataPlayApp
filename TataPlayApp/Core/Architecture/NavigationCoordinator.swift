@@ -541,6 +541,9 @@ struct ChannelDetailView: View {
 struct ContentDetailView: View {
     let contentId: String
     @EnvironmentObject var navigationCoordinator: NavigationCoordinator
+    // Consent management state
+    @State private var showingConsentView = false
+    @State private var showConsentConfirmation = false
     
     var body: some View {
         ScrollView {
@@ -554,6 +557,10 @@ struct ContentDetailView: View {
                 Text("This would show content information, description, cast, etc.")
                     .styled(.captionText)
                 
+                ConsentStatusView(onManageConsentTapped: {
+                    showingConsentView = true
+                })
+                
                 Button("Watch Now") {
                     navigationCoordinator.startWatchingContent(contentId: contentId)
                 }
@@ -562,8 +569,35 @@ struct ContentDetailView: View {
                 .padding(SpacingTokens.buttonPadding)
                 .background(TataPlayColors.primary)
                 .cornerRadius(LayoutConstants.cardCornerRadius)
+                
+                Button("Manage Consent") {
+                    showingConsentView = true
+                }
+                .font(TataPlayTypography.buttonSecondary)
+                .foregroundColor(TataPlayColors.primary)
+                .padding(SpacingTokens.buttonPadding)
+                .overlay(
+                    RoundedRectangle(cornerRadius: LayoutConstants.cardCornerRadius)
+                        .stroke(TataPlayColors.primary, lineWidth: 1)
+                )
             }
             .contentPadding()
+            .sheet(isPresented: $showingConsentView) {
+                EnhancedConsentView(
+                    isPresented: $showingConsentView,
+                    onConsentChanged: {
+                        showConsentConfirmation = true
+                    }
+                )
+            }
+            .alert("Consent Updated", isPresented: $showConsentConfirmation) {
+                Button("OK") {
+                    showConsentConfirmation = false
+                }
+            } message: {
+                Text("Your privacy preferences have been saved.")
+            }
+            // end of scroll view
         }
         .navigationTitle("Content")
         .navigationBarTitleDisplayMode(.inline)

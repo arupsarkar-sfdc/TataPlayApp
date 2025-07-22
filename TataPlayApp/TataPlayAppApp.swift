@@ -11,6 +11,16 @@ import Personalization
 struct TataPlayApp: App {
     @StateObject private var appState = AppState()
     @StateObject private var authenticationManager = AuthenticationManager()
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    
+    class AppDelegate: NSObject, UIApplicationDelegate {
+        func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
+            // Initialize DataCloudService early
+            _ = DataCloudService.shared
+            
+            return true
+        }
+    }
     
     var body: some Scene {
         WindowGroup {
